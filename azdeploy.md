@@ -23,15 +23,17 @@ az group create \
 
 ---
 
-## STEP 3 — Create an App Service Plan (B1 Linux)
+## STEP 3 — Create an App Service Plan (F1 Free Linux)
 
 ```bash
 az appservice plan create \
   --name money-minded-plan \
   --resource-group money-minded-rg \
-  --sku B1 \
+  --sku F1 \
   --is-linux
 ```
+
+> **Note:** F1 is the free tier — no quota required. The app sleeps after 20 min of inactivity but is fine for demos and hackathons. Upgrade to B1 later if the subscription quota allows.
 
 ---
 
@@ -163,7 +165,7 @@ az webapp log tail \
 | Resource | Name |
 |---|---|
 | Resource Group | `money-minded-rg` |
-| App Service Plan | `money-minded-plan` (B1 Linux) |
+| App Service Plan | `money-minded-plan` (F1 Free Linux) |
 | Web App | `money-minded-minions` |
 | Region | East US |
 | Runtime | Node.js 20 LTS |
