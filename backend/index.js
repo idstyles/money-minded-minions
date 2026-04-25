@@ -3,7 +3,8 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const fs = require('fs');
 const path = require("path");
-const { callLLM } = require("./ai/azureOpenAi");
+const { runExpenseAnalysis, budgetCreation, expenseAdding } = require("./ai/orchestrator");
+const Budget = require("./models/BudgetSchema");
 require("dotenv").config();
  
 const app = express();
@@ -20,81 +21,85 @@ const ExpenseSchema = new mongoose.Schema({
   amount: Number,
   date: { type: Date, default: Date.now }
 });
-
-// prompt readability 
-const systemPrompt = fs.readFileSync(
-  path.join(__dirname, "ai", "prompts", "financeAgent.txt"),
-  "utf-8"
-);
-
  
 const Expense = mongoose.model("Expense", ExpenseSchema);
 
-// api for connection with llm
-app.post("/analyze-expense-ai", async (req, res) => {
+// budget creation post method
+app.post("/create-budget", async (req, res) => {
   try {
-    const { monthlyBudget, mandatorySpent, newExpense } = req.body;
-
-    const messages = [
-      {
-        role: "system",
-        content: systemPrompt
+    const { monthlyBudget, expenses } = req.body;
+    const aiResult = await budgetCreation({ monthlyBudget, expenses });
+    
+    const { totalSpent, remainingBudget, budgetHealth, recommendation, advice } = aiResult;
+    const budget = new Budget({
+      monthlyBudget,
+      totalSpent,
+      remainingBudget,
+      budgetHealth,
+      aiAdvice: {
+        recommendation,
+        advice
       },
-      {
-        role: "user",
-        content: `
-          Monthly Budget: ${monthlyBudget}
-          Mandatory Spent: ${mandatorySpent}
-          New Expense Amount: ${newExpense.amount}
-          Expense Category: ${newExpense.category}
-        `
-      }
-    ];
-
-    const response = await callLLM({
-      messages,
-      temperature: 0.2,          // low for determinism
-      max_tokens: 200
+      expenses
     });
 
-    // Safely parse JSON
-    const aiResult = JSON.parse(response.choices[0].message.content);
+    const saveBudget = await budget.save();
 
     res.json({
       success: true,
+      budgetId: saveBudget._id,
+      message: "budget created and saved successfully",
       aiResult
     });
-
   } catch (error) {
-    console.error(error);
+    console.log(error);
     res.status(500).json({
       success: false,
-      error: "AI analysis failed or returned invalid JSON"
-    });
+      error: "Budget not created or returned invalid JSON from AI"
+    })
   }
 });
+
+app.post("/add-expense", async(req, res) => {
+  try {
+    const { expense, id } = req.body;
+    // const budget = await Budget.findOne({ userId });
+    const budget = await Budget.findById(id);
+    if(!budget) {
+      return res.status(404).json({ error: "Budget not found in system "});
+    }
+    const aiResult = await expenseAdding({ budget, expense });
+
+    // update the new changes in db
+    budget.expenses.push(expense);
+    budget.totalSpent = aiResult.totalSpent;
+    budget.remainingBudget = aiResult.remainingBudget;
+    budget.budgetHealth = aiResult.budgetHealth;
+    budget.aiAdvice = {
+      recommendation: aiResult.recommendation,
+      advice: aiResult.advice
+    };
+
+    // save it in db
+    await budget.save();
+
+    const newlyAddedExpense = budget.expenses[budget.expenses.length - 1];
+
+    res.json({
+      success: true,
+      expenseId: newlyAddedExpense._id,
+      message: "expense added succesfully",
+      aiResult,
+
+    })
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      success: false,
+      error: "Expense is not able to add or returned invalid json from AI"
+    })
+  }
+})
  
-// API
-app.post("/add-expense", async (req, res) => {
-  const { amount, monthlyBudget } = req.body;
- 
-  await Expense.create({ amount });
- 
-  const expenses = await Expense.find();
-  const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
- 
-  const percentage = (totalSpent / monthlyBudget) * 100;
- 
-  let status;
-  if (percentage < 70) status = "Normal";
-  else if (percentage < 90) status = "Warning";
-  else status = "Overspending";
- 
-  res.json({
-    totalSpent,
-    percentage,
-    status
-  });
-});
  
 app.listen(5000, () => console.log("Server running on port 5000"));
