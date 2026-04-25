@@ -2,6 +2,8 @@
 
 **Strategy:** Single Azure App Service. Express serves both the API and the React build. MongoDB stays on Atlas (already in the cloud).
 
+> **Important:** Run all `az` commands as **single lines** in Cloud Shell — backslash multiline format causes "unrecognized arguments" errors.
+
 ---
 
 ## STEP 1 — Open Azure Portal + Cloud Shell
@@ -16,9 +18,7 @@
 ## STEP 2 — Create a Resource Group
 
 ```bash
-az group create \
-  --name money-minded-rg \
-  --location westeurope
+az group create --name money-minded-rg --location westeurope
 ```
 
 ---
@@ -26,68 +26,40 @@ az group create \
 ## STEP 3 — Create an App Service Plan (F1 Free Linux)
 
 ```bash
-az appservice plan create \
-  --name money-minded-plan \
-  --resource-group money-minded-rg \
-  --sku F1 \
-  --is-linux
+az appservice plan create --name money-minded-plan --resource-group money-minded-rg --sku F1 --is-linux
 ```
 
-> **Note:** F1 is the free tier — no quota required. The app sleeps after 20 min of inactivity but is fine for demos and hackathons. Upgrade to B1 later if the subscription quota allows.
+> **Note:** F1 is the free tier — no quota required. The app sleeps after 20 min of inactivity but is fine for demos and hackathons. If the subscription already has a resource group in another region, delete it first: `az group delete --name money-minded-rg --yes --no-wait`
 
 ---
 
 ## STEP 4 — Create the Web App (Node.js 20)
 
 ```bash
-az webapp create \
-  --name money-minded-minions-group249 \
-  --resource-group money-minded-rg \
-  --plan money-minded-plan \
-  --runtime "NODE:20-lts"
+az webapp create --name money-minded-minions-group249 --resource-group money-minded-rg --plan money-minded-plan --runtime "NODE:20-lts"
 ```
 
-> **Note:** The app name must be globally unique on Azure. If `money-minded-minions-group249` is taken, try `money-minded-minions-group249-<yourname>`.
+> **Note:** The app name must be globally unique on Azure. If `money-minded-minions-group249` is taken, append a suffix and replace it in all subsequent commands.
 
 ---
 
 ## STEP 5 — Set Environment Variables
 
 ```bash
-az webapp config appsettings set \
-  --name money-minded-minions-group249 \
-  --resource-group money-minded-rg \
-  --settings \
-    MONGO_URI="<your-mongodb-atlas-uri>" \
-    AZURE_OPENAI_ENDPOINT="<your-azure-openai-endpoint>" \
-    AZURE_OPENAI_API_KEY="<your-azure-openai-api-key>" \
-    AZURE_OPENAI_DEPLOYMENT="gpt-4.1-mini" \
-    AZURE_OPENAI_VERSION="2024-02-15-preview" \
-    JWT_SECRET="<a-strong-random-secret>" \
-    NODE_ENV="production"
+az webapp config appsettings set --name money-minded-minions-group249 --resource-group money-minded-rg --settings PROJECT="backend" SCM_DO_BUILD_DURING_DEPLOYMENT="true" MONGO_URI="mongodb+srv://idstyles12:abcd1234@myfreecluster.iqvgxeb.mongodb.net/?appName=MyFreeCluster" AZURE_OPENAI_ENDPOINT="https://tiyasha-first-foundry-resource.cognitiveservices.azure.com/" AZURE_OPENAI_API_KEY="<copy-from-backend/.env>" AZURE_OPENAI_DEPLOYMENT="gpt-4.1-mini" AZURE_OPENAI_VERSION="2024-02-15-preview" JWT_SECRET="mmm_jwt_secret_change_in_production" NODE_ENV="production"
 ```
+
+> Replace `<copy-from-backend/.env>` with the actual `AZURE_OPENAI_API_KEY` value from your local `backend/.env` file.
 
 ---
 
 ## STEP 6 — Set Startup Command
 
-Tell Azure which file to run after deployment:
-
 ```bash
-az webapp config set \
-  --name money-minded-minions-group249 \
-  --resource-group money-minded-rg \
-  --startup-file "cd /home/site/wwwroot/backend && node index.js"
+az webapp config set --name money-minded-minions-group249 --resource-group money-minded-rg --startup-file "node index.js"
 ```
 
-Enable automatic build during deployment:
-
-```bash
-az webapp config appsettings set \
-  --name money-minded-minions-group249 \
-  --resource-group money-minded-rg \
-  --settings SCM_DO_BUILD_DURING_DEPLOYMENT="true"
-```
+> Oryx builds from the `backend/` folder (set via `PROJECT=backend` in Step 5), so the startup file is just `node index.js` — no path prefix needed.
 
 ---
 
@@ -96,50 +68,33 @@ az webapp config appsettings set \
 Link the App Service to the GitHub repository:
 
 ```bash
-az webapp deployment source config \
-  --name money-minded-minions-group249 \
-  --resource-group money-minded-rg \
-  --repo-url https://github.com/idstyles/money-minded-minions-group249 \
-  --branch aichange \
-  --manual-integration
+az webapp deployment source config --name money-minded-minions-group249 --resource-group money-minded-rg --repo-url https://github.com/idstyles/money-minded-minions --branch aichange --manual-integration
 ```
 
-Trigger the first deployment:
+> If you see `Operation returned an invalid status 'OK'` — that is a known Azure CLI bug and means the command **succeeded**. Continue to the next step.
+
+Trigger the deployment:
 
 ```bash
-az webapp deployment source sync \
-  --name money-minded-minions-group249 \
-  --resource-group money-minded-rg
+az webapp deployment source sync --name money-minded-minions-group249 --resource-group money-minded-rg
 ```
 
 ---
 
-## STEP 8 — Configure Build via Portal
-
-Go to **Azure Portal → App Service → money-minded-minions-group249 → Configuration → General Settings** and set:
-
-| Field | Value |
-|---|---|
-| Startup Command | `cd /home/site/wwwroot/backend && node index.js` |
-
-Then go to **Deployment Center → Settings** and add a custom build command if needed:
+## STEP 8 — Check Deployment Logs
 
 ```bash
-# Build frontend, then install backend deps
-cd frontend && npm install && npm run build && cd ../backend && npm install
+az webapp log deployment show --name money-minded-minions-group249 --resource-group money-minded-rg
 ```
+
+Look for `"Deployment successful."` at the end. If it failed, check the `details_url` links in the output for the full Oryx build log.
 
 ---
 
-## STEP 9 — Verify Deployment
-
-Get your live URL:
+## STEP 9 — Verify App is Live
 
 ```bash
-az webapp show \
-  --name money-minded-minions-group249 \
-  --resource-group money-minded-rg \
-  --query "defaultHostName" -o tsv
+az webapp show --name money-minded-minions-group249 --resource-group money-minded-rg --query "defaultHostName" -o tsv
 ```
 
 Your app will be live at:
@@ -153,9 +108,7 @@ https://money-minded-minions-group249.azurewebsites.net
 ## STEP 10 — Stream Live Logs (for debugging)
 
 ```bash
-az webapp log tail \
-  --name money-minded-minions-group249 \
-  --resource-group money-minded-rg
+az webapp log tail --name money-minded-minions-group249 --resource-group money-minded-rg
 ```
 
 ---
@@ -167,7 +120,7 @@ az webapp log tail \
 | Resource Group | `money-minded-rg` |
 | App Service Plan | `money-minded-plan` (F1 Free Linux) |
 | Web App | `money-minded-minions-group249` |
-| Region | East US |
+| Region | West Europe |
 | Runtime | Node.js 20 LTS |
 | Branch deployed | `aichange` |
 | Live URL | `https://money-minded-minions-group249.azurewebsites.net` |
@@ -187,7 +140,8 @@ Browser
               └── /*              → React build (frontend/build)
 ```
 
-- Express serves the React production build as static files
+- Oryx detects `PROJECT=backend` and runs `npm install` inside `backend/`
+- Express serves the React production build as static files from `frontend/build`
 - `process.env.PORT` is set automatically by Azure
 - MongoDB runs on Atlas — no database resource needed in Azure
 - All secrets are stored in App Service environment variables (not in code)
