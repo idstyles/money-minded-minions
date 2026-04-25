@@ -41,13 +41,13 @@ az appservice plan create \
 
 ```bash
 az webapp create \
-  --name money-minded-minions \
+  --name money-minded-minions-group249 \
   --resource-group money-minded-rg \
   --plan money-minded-plan \
   --runtime "NODE:20-lts"
 ```
 
-> **Note:** The app name must be globally unique on Azure. If `money-minded-minions` is taken, try `money-minded-minions-<yourname>`.
+> **Note:** The app name must be globally unique on Azure. If `money-minded-minions-group249` is taken, try `money-minded-minions-group249-<yourname>`.
 
 ---
 
@@ -55,7 +55,7 @@ az webapp create \
 
 ```bash
 az webapp config appsettings set \
-  --name money-minded-minions \
+  --name money-minded-minions-group249 \
   --resource-group money-minded-rg \
   --settings \
     MONGO_URI="<your-mongodb-atlas-uri>" \
@@ -75,7 +75,7 @@ Tell Azure which file to run after deployment:
 
 ```bash
 az webapp config set \
-  --name money-minded-minions \
+  --name money-minded-minions-group249 \
   --resource-group money-minded-rg \
   --startup-file "cd /home/site/wwwroot/backend && node index.js"
 ```
@@ -84,7 +84,7 @@ Enable automatic build during deployment:
 
 ```bash
 az webapp config appsettings set \
-  --name money-minded-minions \
+  --name money-minded-minions-group249 \
   --resource-group money-minded-rg \
   --settings SCM_DO_BUILD_DURING_DEPLOYMENT="true"
 ```
@@ -97,9 +97,9 @@ Link the App Service to the GitHub repository:
 
 ```bash
 az webapp deployment source config \
-  --name money-minded-minions \
+  --name money-minded-minions-group249 \
   --resource-group money-minded-rg \
-  --repo-url https://github.com/idstyles/money-minded-minions \
+  --repo-url https://github.com/idstyles/money-minded-minions-group249 \
   --branch aichange \
   --manual-integration
 ```
@@ -108,7 +108,7 @@ Trigger the first deployment:
 
 ```bash
 az webapp deployment source sync \
-  --name money-minded-minions \
+  --name money-minded-minions-group249 \
   --resource-group money-minded-rg
 ```
 
@@ -116,7 +116,7 @@ az webapp deployment source sync \
 
 ## STEP 8 — Configure Build via Portal
 
-Go to **Azure Portal → App Service → money-minded-minions → Configuration → General Settings** and set:
+Go to **Azure Portal → App Service → money-minded-minions-group249 → Configuration → General Settings** and set:
 
 | Field | Value |
 |---|---|
@@ -137,7 +137,7 @@ Get your live URL:
 
 ```bash
 az webapp show \
-  --name money-minded-minions \
+  --name money-minded-minions-group249 \
   --resource-group money-minded-rg \
   --query "defaultHostName" -o tsv
 ```
@@ -145,7 +145,7 @@ az webapp show \
 Your app will be live at:
 
 ```
-https://money-minded-minions.azurewebsites.net
+https://money-minded-minions-group249.azurewebsites.net
 ```
 
 ---
@@ -154,7 +154,7 @@ https://money-minded-minions.azurewebsites.net
 
 ```bash
 az webapp log tail \
-  --name money-minded-minions \
+  --name money-minded-minions-group249 \
   --resource-group money-minded-rg
 ```
 
@@ -166,11 +166,11 @@ az webapp log tail \
 |---|---|
 | Resource Group | `money-minded-rg` |
 | App Service Plan | `money-minded-plan` (F1 Free Linux) |
-| Web App | `money-minded-minions` |
+| Web App | `money-minded-minions-group249` |
 | Region | East US |
 | Runtime | Node.js 20 LTS |
 | Branch deployed | `aichange` |
-| Live URL | `https://money-minded-minions.azurewebsites.net` |
+| Live URL | `https://money-minded-minions-group249.azurewebsites.net` |
 
 ---
 
@@ -178,7 +178,7 @@ az webapp log tail \
 
 ```
 Browser
-  └── https://money-minded-minions.azurewebsites.net
+  └── https://money-minded-minions-group249.azurewebsites.net
         └── Express (backend/index.js)
               ├── /auth/*         → JWT auth routes
               ├── /budget         → Budget API
