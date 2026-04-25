@@ -18,7 +18,7 @@
 ```bash
 az group create \
   --name money-minded-rg \
-  --location eastus
+  --location westeurope
 ```
 
 ---
