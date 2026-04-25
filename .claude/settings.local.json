@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npx react-scripts *)",
+      "Bash(node --check index.js)",
+      "Bash(node --check models/UserSchema.js)",
+      "Bash(node --check models/BudgetSchema.js)",
+      "Bash(node --check middleware/auth.js)",
+      "Bash(npm run *)",
+      "Bash(echo \"Backend PID: $!\")",
+      "Bash(npm start *)",
+      "Bash(echo \"Frontend PID: $!\")",
+      "Read(//tmp/**)",
+      "Bash(az --version)",
+      "Bash(az account *)",
+      "Read(//c/Program Files \\(x86\\)/Microsoft SDKs/Azure/CLI2/**)",
+      "Read(//c/Program Files/Microsoft SDKs/Azure/CLI2/**)",
+      "PowerShell(Start-Process msiexec.exe -ArgumentList \"/i `\"$env:TEMP\\\\AzureCLI.msi`\" /quiet /norestart\" -Wait -PassThru | Select-Object ExitCode)",
+      "PowerShell(pip *)"
+    ]
+  }
+}
