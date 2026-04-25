@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import "./App.css";
 import AuthPage from "./AuthPage";
 
-const API = "http://localhost:5000";
+const API = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const CATEGORY_ICONS = {
   Food: "🍔", Transport: "🚗", Shopping: "🛍️",

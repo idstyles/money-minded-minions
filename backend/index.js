@@ -170,4 +170,14 @@ app.post("/chat", auth, async (req, res) => {
   }
 });
 
-app.listen(5000, () => console.log("Server running on port 5000"));
+// ─── Serve React build in production ──────────────────────────
+const frontendBuild = path.join(__dirname, "..", "frontend", "build");
+if (fs.existsSync(frontendBuild)) {
+  app.use(express.static(frontendBuild));
+  app.get("*", (req, res) =>
+    res.sendFile(path.join(frontendBuild, "index.html"))
+  );
+}
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
