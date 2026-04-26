@@ -524,19 +524,74 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg);
+  background: radial-gradient(ellipse 90% 70% at 50% 40%, rgba(255,217,61,.07) 0%, var(--bg) 68%);
   padding: 20px;
+  position: relative;
+  overflow: hidden;
 }
+
+/* Floating banana decorations */
+.auth-banana {
+  position: absolute;
+  pointer-events: none;
+  opacity: .18;
+  animation: banana-float 3s ease-in-out infinite;
+  user-select: none;
+}
+.auth-banana-1 { font-size: 2.6rem; top: 6%;  left: 4%;   animation-delay: 0s;    animation-duration: 3.2s; }
+.auth-banana-2 { font-size: 1.8rem; top: 12%; right: 6%;  animation-delay: 1.1s;  animation-duration: 2.8s; }
+.auth-banana-3 { font-size: 2.2rem; bottom: 10%; left: 7%; animation-delay: 0.5s; animation-duration: 3.5s; }
+.auth-banana-4 { font-size: 2.8rem; bottom: 18%; right: 4%; animation-delay: 1.6s; animation-duration: 3s; }
+.auth-banana-5 { font-size: 1.5rem; top: 48%; left: 2%;  animation-delay: 2s;    animation-duration: 2.6s; }
+.auth-banana-6 { font-size: 1.9rem; top: 42%; right: 3%; animation-delay: 0.8s;  animation-duration: 3.3s; }
 
 .auth-card {
   background: var(--surface);
   border: 1px solid var(--border);
+  border-top: 4px solid var(--minion-yellow);
   border-radius: var(--radius);
-  padding: 40px 36px;
+  padding: 32px 36px 40px;
   width: 100%;
-  max-width: 400px;
-  box-shadow: var(--shadow);
+  max-width: 420px;
+  box-shadow: var(--shadow), 0 0 40px rgba(255,217,61,.08);
   animation: slideIn .3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+/* Minion trio above the form title */
+.auth-minion-group {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.auth-minion-center .minion-wrap {
+  animation-duration: 2s;
+}
+
+.auth-minion-side {
+  display: inline-block;
+}
+
+.auth-minion-left {
+  transform: rotate(-14deg);
+  margin-bottom: 6px;
+}
+.auth-minion-left .minion-wrap {
+  animation-delay: .45s;
+  animation-duration: 2.3s;
+}
+
+.auth-minion-right {
+  transform: rotate(14deg);
+  margin-bottom: 6px;
+}
+.auth-minion-right .minion-wrap {
+  animation-delay: .9s;
+  animation-duration: 1.9s;
 }
 
 .auth-logo {

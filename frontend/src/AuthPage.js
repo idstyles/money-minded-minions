@@ -1,4 +1,5 @@
 import { useState } from "react";
+import MinionAvatar from "./MinionAvatar";
 
 const API = process.env.NODE_ENV === "production" ? "" : "http://localhost:5000";
 
@@ -48,10 +49,30 @@ export default function AuthPage({ onAuth, onPending }) {
 
   return (
     <div className="auth-container">
+      {/* Floating background bananas */}
+      <span className="auth-banana auth-banana-1">🍌</span>
+      <span className="auth-banana auth-banana-2">🍌</span>
+      <span className="auth-banana auth-banana-3">🍌</span>
+      <span className="auth-banana auth-banana-4">🍌</span>
+      <span className="auth-banana auth-banana-5">🍌</span>
+      <span className="auth-banana auth-banana-6">🍌</span>
+
       <div className="auth-card">
-        <div className="auth-logo">💰</div>
+        {/* Minion trio */}
+        <div className="auth-minion-group">
+          <div className="auth-minion-side auth-minion-left">
+            <MinionAvatar size="sm" animated />
+          </div>
+          <div className="auth-minion-center">
+            <MinionAvatar size="md" animated />
+          </div>
+          <div className="auth-minion-side auth-minion-right">
+            <MinionAvatar size="sm" animated />
+          </div>
+        </div>
+
         <h1 className="auth-title">Money Minded Minions</h1>
-        <p className="auth-subtitle">Smart budgeting with AI co-pilot</p>
+        <p className="auth-subtitle">🍌 Smart budgeting with AI co-pilot 🍌</p>
 
         <div className="auth-tabs">
           <button
