@@ -307,25 +307,331 @@ app.patch("/budget/category-limit", auth, async (req, res) => {
   }
 });
 
+// ─── Expense edit / delete ────────────────────────────────────
+
+function recalcBudget(budget) {
+  const totalSpent = budget.expenses.reduce((s, e) => s + e.amount, 0);
+  const remainingBudget = budget.monthlyBudget - totalSpent;
+  const pct = budget.monthlyBudget > 0 ? totalSpent / budget.monthlyBudget : 0;
+  budget.totalSpent      = totalSpent;
+  budget.remainingBudget = remainingBudget;
+  budget.budgetHealth    = pct > 1 ? "Critical" : pct >= 0.8 ? "Tight" : "Healthy";
+  if (budget.categoryLimits?.length) {
+    for (const cl of budget.categoryLimits) {
+      cl.spent = budget.expenses
+        .filter((e) => e.category.toLowerCase() === cl.category.toLowerCase())
+        .reduce((s, e) => s + e.amount, 0);
+    }
+  }
+  return budget;
+}
+
+app.patch("/expense/:budgetId/:expenseId", auth, async (req, res) => {
+  try {
+    const { amount, category, isMandatory } = req.body;
+    const budget = await Budget.findOne({ _id: req.params.budgetId, userId: req.user.id });
+    if (!budget) return res.status(404).json({ error: "Budget not found" });
+    const exp = budget.expenses.id(req.params.expenseId);
+    if (!exp) return res.status(404).json({ error: "Expense not found" });
+    if (amount      !== undefined) exp.amount      = Number(amount);
+    if (category    !== undefined) exp.category    = category;
+    if (isMandatory !== undefined) exp.isMandatory = isMandatory;
+    recalcBudget(budget);
+    await budget.save();
+    res.json({ success: true, budget });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to update expense" });
+  }
+});
+
+app.delete("/expense/:budgetId/:expenseId", auth, async (req, res) => {
+  try {
+    const budget = await Budget.findOne({ _id: req.params.budgetId, userId: req.user.id });
+    if (!budget) return res.status(404).json({ error: "Budget not found" });
+    const expIdx = budget.expenses.findIndex((e) => e._id.toString() === req.params.expenseId);
+    if (expIdx === -1) return res.status(404).json({ error: "Expense not found" });
+    budget.expenses.splice(expIdx, 1);
+    recalcBudget(budget);
+    await budget.save();
+    res.json({ success: true, budget });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to delete expense" });
+  }
+});
+
+// ─── Chat tools ───────────────────────────────────────────────
+
+const CHAT_TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "add_expense",
+      description: "Add a new expense to the user's current active budget. Call this whenever the user says they spent money, bought something, or wants to log/record a purchase or payment.",
+      parameters: {
+        type: "object",
+        properties: {
+          amount:      { type: "number",  description: "Amount in INR (Indian Rupees)" },
+          category:    { type: "string",  enum: ["Food","Transport","Shopping","Entertainment","Utilities","Rent/EMI","Other"], description: "Expense category" },
+          isMandatory: { type: "boolean", description: "True for essential expenses (rent, EMI, bills, medicine). False for optional/discretionary spending." },
+        },
+        required: ["amount", "category", "isMandatory"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "edit_expense",
+      description: "Edit an existing expense in the current budget — correct a wrong amount, wrong category, or mandatory flag. Use the expenseId from the recent expenses list in context.",
+      parameters: {
+        type: "object",
+        properties: {
+          expenseId:   { type: "string",  description: "The _id of the expense to edit (from context)" },
+          amount:      { type: "number",  description: "New amount in INR (omit if not changing)" },
+          category:    { type: "string",  enum: ["Food","Transport","Shopping","Entertainment","Utilities","Rent/EMI","Other"], description: "New category (omit if not changing)" },
+          isMandatory: { type: "boolean", description: "New mandatory flag (omit if not changing)" },
+        },
+        required: ["expenseId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "delete_expense",
+      description: "Delete/remove an expense from the current budget. Use when the user says an expense was wrong, entered by mistake, or wants to undo/remove it. Use the expenseId from the recent expenses list in context.",
+      parameters: {
+        type: "object",
+        properties: {
+          expenseId: { type: "string", description: "The _id of the expense to delete (from context)" },
+        },
+        required: ["expenseId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_category_limit",
+      description: "Update the spending limit for a budget category. Call this when the user wants to change, increase, decrease, or set a category budget.",
+      parameters: {
+        type: "object",
+        properties: {
+          category: { type: "string",  enum: ["Food","Transport","Shopping","Entertainment","Utilities","Rent/EMI","Other"], description: "Category to update" },
+          newLimit: { type: "number",  description: "New spending limit in INR" },
+        },
+        required: ["category", "newLimit"],
+      },
+    },
+  },
+];
+
 // ─── Chat ─────────────────────────────────────────────────────
 
 app.post("/chat", auth, async (req, res) => {
   try {
     const { messages, context } = req.body;
+    const userId = req.user.id;
 
-    const contextLine = context
-      ? `User's current budget context: Monthly Budget = ₹${context.monthlyBudget || 0}, Total Spent = ₹${context.totalSpent || 0}, Remaining = ₹${context.remainingBudget || 0}, Budget Health = ${context.budgetHealth || "Unknown"}, Latest Advice = ${context.lastAdvice || "None"}.`
+    // ── Load full budget history for pattern analysis ──────────
+    const allBudgets = await Budget.find({ userId }).sort({ createdAt: 1 });
+
+    function buildHistoryContext(budgets) {
+      if (!budgets.length) return "";
+
+      const lines = ["\n\n=============== USER'S FULL BUDGET HISTORY ==============="];
+
+      for (const b of budgets) {
+        const monthLabel = new Date(b.createdAt).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+        const pct = b.monthlyBudget ? Math.round((b.totalSpent / b.monthlyBudget) * 100) : 0;
+        lines.push(`\n[${monthLabel}] Budget: ₹${b.monthlyBudget} | Spent: ₹${b.totalSpent} (${pct}%) | Remaining: ₹${b.remainingBudget} | Health: ${b.budgetHealth}`);
+
+        if (b.categoryLimits?.length) {
+          const catSummary = b.categoryLimits
+            .map((cl) => {
+              const over = cl.spent > cl.limit ? " ⚠OVER" : "";
+              return `${cl.category}: ₹${cl.spent}/₹${cl.limit}${over}`;
+            })
+            .join(" | ");
+          lines.push(`  Categories: ${catSummary}`);
+        }
+
+        if (b.expenses?.length) {
+          // Group expenses by category for compact representation
+          const grouped = {};
+          for (const e of b.expenses) {
+            if (!grouped[e.category]) grouped[e.category] = { count: 0, total: 0, mandatory: e.isMandatory };
+            grouped[e.category].count++;
+            grouped[e.category].total += e.amount;
+          }
+          const expSummary = Object.entries(grouped)
+            .sort((a, b) => b[1].total - a[1].total)
+            .map(([cat, d]) => `${cat} ₹${d.total} (${d.count} txn${d.count > 1 ? "s" : ""})`)
+            .join(", ");
+          lines.push(`  Expense breakdown: ${expSummary}`);
+        }
+      }
+
+      lines.push("\n=============== END OF HISTORY ===============");
+      lines.push("Use this history to identify spending patterns, recurring expenses, category trends, and to make predictions for upcoming months.");
+      return lines.join("\n");
+    }
+
+    const historyContext = buildHistoryContext(allBudgets);
+
+    const catLimitsLine = context?.categoryLimits?.length
+      ? `\nCategory limits: ${context.categoryLimits.map((cl) => `${cl.category} (spent ₹${cl.spent} of ₹${cl.limit})`).join(", ")}.`
       : "";
 
+    // Include recent expense IDs so co-pilot can reference them for edit/delete
+    const currentBudget = allBudgets[allBudgets.length - 1];
+    const recentExpensesLine = currentBudget?.expenses?.length
+      ? "\n\nRecent expenses in current budget (use these IDs for edit_expense / delete_expense):\n" +
+        [...currentBudget.expenses]
+          .reverse()
+          .slice(0, 15)
+          .map((e) =>
+            `  ID:${e._id} | ${new Date(e.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} | ${e.category} | ₹${e.amount} | ${e.isMandatory ? "Essential" : "Optional"}`
+          )
+          .join("\n")
+      : "";
+
+    const currentContextLine = context
+      ? `\n\nCurrent month context: Monthly Budget = ₹${context.monthlyBudget || 0}, Total Spent = ₹${context.totalSpent || 0}, Remaining = ₹${context.remainingBudget || 0}, Budget Health = ${context.budgetHealth || "Unknown"}, Latest Advice = ${context.lastAdvice || "None"}.${catLimitsLine}${recentExpensesLine}`
+      : recentExpensesLine;
+
     const fullMessages = [
-      { role: "system", content: chatSystemPrompt + (contextLine ? `\n\n${contextLine}` : "") },
+      { role: "system", content: chatSystemPrompt + historyContext + currentContextLine },
       ...messages,
     ];
 
-    const response = await callLLM({ messages: fullMessages, temperature: 0.7, max_tokens: 300 });
-    const reply = response.choices[0].message.content;
+    // ── First LLM call: may return a tool call or a plain reply ──
+    const resp1 = await callLLM({
+      messages: fullMessages,
+      temperature: 0.7,
+      max_tokens: 400,
+      tools: CHAT_TOOLS,
+      tool_choice: "auto",
+    });
 
-    res.json({ success: true, reply });
+    const choice1 = resp1.choices[0];
+
+    // ── No tool call: return the text reply as-is ─────────────
+    if (choice1.finish_reason !== "tool_calls" || !choice1.message.tool_calls?.length) {
+      return res.json({ success: true, reply: choice1.message.content });
+    }
+
+    // ── Tool call: execute the action ─────────────────────────
+    const toolCall = choice1.message.tool_calls[0];
+    const toolName = toolCall.function.name;
+    let toolArgs;
+    try { toolArgs = JSON.parse(toolCall.function.arguments); }
+    catch { return res.json({ success: true, reply: "I had trouble understanding that action. Could you rephrase?" }); }
+
+    let toolResultText = "";
+    let updatedBudget   = null;
+
+    const budget = await Budget.findOne({ userId }).sort({ createdAt: -1 });
+
+    if (!budget) {
+      toolResultText = "No active budget found. The user has not created a budget yet.";
+    } else if (toolName === "add_expense") {
+      const { amount, category, isMandatory } = toolArgs;
+      const expense = { amount, category, isMandatory };
+
+      const budgetWithTotals = {
+        ...budget.toObject(),
+        mandatorySpent:    budget.expenses.filter((e) => e.isMandatory).reduce((s, e) => s + e.amount, 0),
+        nonMandatorySpent: budget.expenses.filter((e) => !e.isMandatory).reduce((s, e) => s + e.amount, 0),
+      };
+
+      const aiResult = await expenseAdding({ budget: budgetWithTotals, expense });
+
+      budget.expenses.push(expense);
+      budget.totalSpent       = aiResult.totalSpent;
+      budget.remainingBudget  = aiResult.remainingBudget;
+      budget.budgetHealth     = aiResult.budgetHealth;
+      budget.aiAdvice         = { recommendation: aiResult.recommendation, advice: aiResult.advice };
+
+      if (category && budget.categoryLimits?.length) {
+        const idx = budget.categoryLimits.findIndex(
+          (cl) => cl.category.toLowerCase() === category.toLowerCase()
+        );
+        if (idx !== -1) budget.categoryLimits[idx].spent += amount;
+      }
+
+      await budget.save();
+      updatedBudget = budget;
+      toolResultText = `Expense added: ₹${amount} for ${category} (${isMandatory ? "essential" : "optional"}). New total spent: ₹${budget.totalSpent}. Remaining budget: ₹${budget.remainingBudget}. Budget health is now: ${budget.budgetHealth}.`;
+
+    } else if (toolName === "edit_expense") {
+      const { expenseId, amount, category, isMandatory } = toolArgs;
+      const exp = budget.expenses.id(expenseId);
+      if (!exp) {
+        toolResultText = `Could not find an expense with ID ${expenseId} in the current budget.`;
+      } else {
+        const oldAmount   = exp.amount;
+        const oldCategory = exp.category;
+        if (amount      !== undefined) exp.amount      = Number(amount);
+        if (category    !== undefined) exp.category    = category;
+        if (isMandatory !== undefined) exp.isMandatory = isMandatory;
+        recalcBudget(budget);
+        await budget.save();
+        updatedBudget  = budget;
+        toolResultText = `Expense updated: was ₹${oldAmount} for ${oldCategory}, now ₹${exp.amount} for ${exp.category}. New total spent: ₹${budget.totalSpent}. Remaining: ₹${budget.remainingBudget}. Health: ${budget.budgetHealth}.`;
+      }
+
+    } else if (toolName === "delete_expense") {
+      const { expenseId } = toolArgs;
+      const expIdx = budget.expenses.findIndex((e) => e._id.toString() === expenseId);
+      if (expIdx === -1) {
+        toolResultText = `Could not find an expense with ID ${expenseId} in the current budget.`;
+      } else {
+        const removed = budget.expenses[expIdx];
+        budget.expenses.splice(expIdx, 1);
+        recalcBudget(budget);
+        await budget.save();
+        updatedBudget  = budget;
+        toolResultText = `Deleted expense: ₹${removed.amount} for ${removed.category}. New total spent: ₹${budget.totalSpent}. Remaining: ₹${budget.remainingBudget}. Health: ${budget.budgetHealth}.`;
+      }
+
+    } else if (toolName === "update_category_limit") {
+      const { category, newLimit } = toolArgs;
+      const idx = budget.categoryLimits?.findIndex(
+        (cl) => cl.category.toLowerCase() === category.toLowerCase()
+      ) ?? -1;
+
+      if (idx === -1) {
+        toolResultText = `Category "${category}" was not found in this budget. Available categories: ${budget.categoryLimits?.map((cl) => cl.category).join(", ") || "none"}.`;
+      } else {
+        const oldLimit = budget.categoryLimits[idx].limit;
+        budget.categoryLimits[idx].limit = newLimit;
+        await budget.save();
+        updatedBudget = budget;
+        toolResultText = `Updated ${category} spending limit from ₹${oldLimit} to ₹${newLimit}. Current spent in this category: ₹${budget.categoryLimits[idx].spent}.`;
+      }
+    }
+
+    // ── Second LLM call: generate natural confirmation ────────
+    const resp2 = await callLLM({
+      messages: [
+        ...fullMessages,
+        choice1.message,
+        { role: "tool", tool_call_id: toolCall.id, content: toolResultText },
+      ],
+      temperature: 0.7,
+      max_tokens: 300,
+    });
+
+    const reply = resp2.choices[0].message.content;
+    res.json({
+      success: true,
+      reply,
+      action: updatedBudget ? { type: "budget_updated", budget: updatedBudget } : null,
+    });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, error: "Chat failed" });

@@ -52,9 +52,15 @@ export default function App() {
   const [editLimitVal, setEditLimitVal]       = useState("");
   const [savingLimit, setSavingLimit]         = useState(false);
 
+  // Expense edit / delete
+  const [editingExpenseId, setEditingExpenseId] = useState(null);
+  const [editExpFields, setEditExpFields]       = useState({ amount: "", category: "Food", isMandatory: false });
+  const [savingExpense, setSavingExpense]       = useState(false);
+  const [deletingExpenseId, setDeletingExpenseId] = useState(null);
+
   // Chat
   const [chatHistory, setChatHistory] = useState([
-    { role: "agent", content: "Bello! 🍌 I'm your Minion finance co-pilot! Ask me anything about budgets, spending habits, or how to save more bananas! 🍌" },
+    { role: "agent", content: "Bello! 🍌 I'm your Minion finance co-pilot! I can see your full spending history, predict upcoming expenses, AND take real actions. Try: \"predict my next month expenses\", \"add ₹500 for groceries\", or \"set my food limit to ₹8000\"! 🍌" },
   ]);
   const [chatInput, setChatInput]     = useState("");
   const [chatLoading, setChatLoading] = useState(false);
@@ -243,6 +249,47 @@ export default function App() {
     }
   }
 
+  function startEditExpense(tx) {
+    setEditingExpenseId(tx._id);
+    setEditExpFields({ amount: tx.amount, category: tx.category, isMandatory: tx.isMandatory });
+  }
+
+  async function saveEditExpense() {
+    if (!budget || !editingExpenseId) return;
+    setSavingExpense(true);
+    try {
+      const res = await fetch(`${API}/expense/${budget._id}/${editingExpenseId}`, {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          amount: Number(editExpFields.amount),
+          category: editExpFields.category,
+          isMandatory: editExpFields.isMandatory,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBudget(data.budget);
+        setEditingExpenseId(null);
+      }
+    } catch (err) { console.error(err); }
+    finally { setSavingExpense(false); }
+  }
+
+  async function deleteExpense(expenseId) {
+    if (!budget) return;
+    setDeletingExpenseId(expenseId);
+    try {
+      const res = await fetch(`${API}/expense/${budget._id}/${expenseId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (data.success) setBudget(data.budget);
+    } catch (err) { console.error(err); }
+    finally { setDeletingExpenseId(null); }
+  }
+
   async function sendChat() {
     const text = chatInput.trim();
     if (!text || chatLoading) return;
@@ -259,6 +306,9 @@ export default function App() {
           remainingBudget: budget.remainingBudget,
           budgetHealth: budget.budgetHealth,
           lastAdvice: budget.aiAdvice?.advice,
+          categoryLimits: budget.categoryLimits?.map((cl) => ({
+            category: cl.category, limit: cl.limit, spent: cl.spent,
+          })),
         }
       : null;
 
@@ -273,9 +323,16 @@ export default function App() {
         body: JSON.stringify({ messages: apiMessages, context }),
       });
       const data = await res.json();
+      if (data.action?.type === "budget_updated") {
+        setBudget(data.action.budget);
+      }
       setChatHistory((h) => [
         ...h,
-        { role: "agent", content: data.success ? data.reply : "Sorry, I ran into an issue. Please try again." },
+        {
+          role: "agent",
+          content: data.success ? data.reply : "Sorry, I ran into an issue. Please try again.",
+          actionType: data.action?.type || null,
+        },
       ]);
     } catch {
       setChatHistory((h) => [
@@ -497,13 +554,12 @@ export default function App() {
         </button>
       </div>
 
-      {dashboardTab === "history" ? (
-        <div className="history-wrapper">
+      <div className="main-grid">
+        {dashboardTab === "history" ? (
+          /* ── History left column ── */
           <BudgetHistoryTab token={token} />
-        </div>
-      ) : (
-        <div className="main-grid">
-          {/* ── Left column ── */}
+        ) : (
+          /* ── Current budget left column ── */
           <div>
             {/* Budget summary */}
             <div className="card budget-card">
@@ -656,66 +712,126 @@ export default function App() {
               {!budget.expenses?.length && (
                 <div className="empty-state">No transactions yet. Add your first expense above.</div>
               )}
-              {[...budget.expenses].reverse().slice(0, 10).map((tx) => (
-                <div className="transaction-item" key={tx._id}>
-                  <div className="tx-left">
-                    <div className="tx-icon">{CATEGORY_ICONS[tx.category] || "📦"}</div>
-                    <div>
-                      <div className="tx-category">
-                        {tx.category}
-                        {tx.isMandatory && <span className="mandatory-badge">Essential</span>}
+              {[...budget.expenses].reverse().slice(0, 10).map((tx) => {
+                const isEditing  = editingExpenseId === tx._id;
+                const isDeleting = deletingExpenseId === tx._id;
+                if (isEditing) {
+                  return (
+                    <div className="tx-edit-row" key={tx._id}>
+                      <input
+                        className="tx-edit-input"
+                        type="number"
+                        value={editExpFields.amount}
+                        onChange={(e) => setEditExpFields((p) => ({ ...p, amount: e.target.value }))}
+                        placeholder="Amount (₹)"
+                      />
+                      <select
+                        className="tx-edit-select"
+                        value={editExpFields.category}
+                        onChange={(e) => setEditExpFields((p) => ({ ...p, category: e.target.value }))}
+                      >
+                        {Object.keys(CATEGORY_ICONS).map((c) => (
+                          <option key={c} value={c}>{CATEGORY_ICONS[c]} {c}</option>
+                        ))}
+                      </select>
+                      <label className="tx-edit-mandatory">
+                        <input
+                          type="checkbox"
+                          checked={editExpFields.isMandatory}
+                          onChange={(e) => setEditExpFields((p) => ({ ...p, isMandatory: e.target.checked }))}
+                        />
+                        Essential
+                      </label>
+                      <button className="btn-primary btn-sm" onClick={saveEditExpense} disabled={savingExpense}>
+                        {savingExpense ? "…" : "Save"}
+                      </button>
+                      <button className="btn-secondary btn-sm" onClick={() => setEditingExpenseId(null)}>
+                        Cancel
+                      </button>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="transaction-item" key={tx._id}>
+                    <div className="tx-left">
+                      <div className="tx-icon">{CATEGORY_ICONS[tx.category] || "📦"}</div>
+                      <div>
+                        <div className="tx-category">
+                          {tx.category}
+                          {tx.isMandatory && <span className="mandatory-badge">Essential</span>}
+                        </div>
+                        <div className="tx-date">{formatDate(tx.createdAt)}</div>
                       </div>
-                      <div className="tx-date">{formatDate(tx.createdAt)}</div>
+                    </div>
+                    <div className="tx-right">
+                      <div className="tx-amount">−₹{tx.amount.toLocaleString("en-IN")}</div>
+                      <div className="tx-actions">
+                        <button
+                          className="tx-action-btn tx-edit-btn"
+                          title="Edit expense"
+                          onClick={() => startEditExpense(tx)}
+                        >✏️</button>
+                        <button
+                          className="tx-action-btn tx-delete-btn"
+                          title="Delete expense"
+                          onClick={() => deleteExpense(tx._id)}
+                          disabled={isDeleting}
+                        >{isDeleting ? "…" : "🗑️"}</button>
+                      </div>
                     </div>
                   </div>
-                  <div className="tx-amount">−₹{tx.amount.toLocaleString("en-IN")}</div>
-                </div>
-              ))}
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Co-pilot panel ── always visible in both tabs */}
+        <div className="card copilot-panel">
+          <div className="copilot-header">
+            <div className="copilot-minion-area">
+              <MinionAvatar size="md" animated />
+              <span className="copilot-minion-label">Bello!</span>
+            </div>
+            <div style={{ flex: 1 }}>
+              <h2>Minion Co-pilot 🍌</h2>
+              <span className="model-tag">Azure OpenAI</span>
             </div>
           </div>
 
-          {/* ── Co-pilot panel ── */}
-          <div className="card copilot-panel">
-            <div className="copilot-header">
-              <div className="copilot-minion-area">
-                <MinionAvatar size="md" animated />
-                <span className="copilot-minion-label">Bello!</span>
+          <div className="chat-messages">
+            {chatHistory.map((msg, i) => (
+              <div key={i} className={`msg ${msg.role}`}>
+                {msg.actionType && (
+                  <span className="msg-action-badge">
+                    {msg.actionType === "budget_updated" ? "✅ Budget updated" : "✅ Done"}
+                  </span>
+                )}
+                {msg.content}
               </div>
-              <div style={{ flex: 1 }}>
-                <h2>Minion Co-pilot 🍌</h2>
-                <span className="model-tag">Azure OpenAI</span>
-              </div>
-            </div>
+            ))}
+            {chatLoading && <div className="msg typing">Co-pilot is thinking… 🍌</div>}
+            <div ref={chatEndRef} />
+          </div>
 
-            <div className="chat-messages">
-              {chatHistory.map((msg, i) => (
-                <div key={i} className={`msg ${msg.role}`}>
-                  {msg.content}
-                </div>
-              ))}
-              {chatLoading && <div className="msg typing">Co-pilot is thinking…</div>}
-              <div ref={chatEndRef} />
-            </div>
-
-            <div className="chat-input-row">
-              <input
-                placeholder="Ask about your spending…"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && sendChat()}
-                disabled={chatLoading}
-              />
-              <button
-                className="btn-send"
-                onClick={sendChat}
-                disabled={chatLoading || !chatInput.trim()}
-              >
-                Send
-              </button>
-            </div>
+          <div className="chat-input-row">
+            <input
+              placeholder="Ask about your spending…"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendChat()}
+              disabled={chatLoading}
+            />
+            <button
+              className="btn-send"
+              onClick={sendChat}
+              disabled={chatLoading || !chatInput.trim()}
+            >
+              Send
+            </button>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

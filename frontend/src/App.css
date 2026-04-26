@@ -318,10 +318,11 @@ body {
   padding: 10px 0;
   border-bottom: 1px solid var(--border);
 }
-
+.transaction-item:hover .tx-actions { opacity: 1; }
 .transaction-item:last-child { border-bottom: none; }
 
-.tx-left { display: flex; align-items: center; gap: 10px; }
+.tx-left { display: flex; align-items: center; gap: 10px; flex: 1; }
+.tx-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
 .tx-icon {
   width: 34px;
@@ -332,11 +333,72 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 16px;
+  flex-shrink: 0;
 }
 
 .tx-category { font-size: .88rem; font-weight: 500; }
 .tx-date     { font-size: .74rem; color: var(--muted); margin-top: 1px; }
 .tx-amount   { font-size: .92rem; font-weight: 600; color: var(--danger); }
+
+.tx-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity .15s;
+}
+
+.tx-action-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: .8rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: background .15s, border-color .15s;
+}
+.tx-edit-btn:hover   { background: rgba(75,142,218,.15); border-color: var(--primary); }
+.tx-delete-btn:hover { background: rgba(239,68,68,.15);  border-color: var(--danger); }
+.tx-action-btn:disabled { opacity: .5; cursor: default; }
+
+/* ── Inline expense edit row ────────────────────────────────── */
+.tx-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.tx-edit-input {
+  width: 100px;
+  padding: 6px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: .82rem;
+}
+.tx-edit-input:focus { outline: none; border-color: var(--primary); }
+.tx-edit-select {
+  padding: 6px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: .82rem;
+  cursor: pointer;
+}
+.tx-edit-select:focus { outline: none; border-color: var(--primary); }
+.tx-edit-mandatory {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: .8rem;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
 
 .empty-state {
   text-align: center;
@@ -426,6 +488,20 @@ body {
   font-size: .8rem;
   padding: 10px 16px;
   border-bottom-left-radius: 4px;
+}
+
+.msg-action-badge {
+  display: block;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--success);
+  background: rgba(34,197,94,.12);
+  border: 1px solid rgba(34,197,94,.3);
+  border-radius: 6px;
+  padding: 2px 8px;
+  margin-bottom: 6px;
+  width: fit-content;
+  letter-spacing: .02em;
 }
 
 .chat-input-row {
@@ -1183,64 +1259,227 @@ body {
   border-bottom-color: var(--primary);
 }
 
-/* ── Budget history ──────────────────────────────────────────── */
-.history-wrapper {
-  padding: 28px 32px;
-  max-width: 900px;
-  margin: 0 auto;
-}
+/* ── Budget history (legacy, keep for compatibility) ─────────── */
+.history-wrapper { padding: 28px 32px; }
 .history-tab-content { display: flex; flex-direction: column; gap: 16px; }
-.budget-history-card {
+.budget-history-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; }
+.budget-history-header { display: flex; flex-direction: column; gap: 10px; }
+.budget-history-meta { display: flex; align-items: center; gap: 10px; }
+.budget-history-date { font-weight: 700; font-size: 1rem; }
+.budget-history-amounts { display: flex; gap: 20px; color: var(--muted); font-size: .85rem; }
+.budget-history-expand-btn { background: none; border: 1px solid var(--border); color: var(--primary); padding: 6px 14px; border-radius: 8px; font-size: .8rem; font-weight: 600; cursor: pointer; align-self: flex-start; transition: background .2s; }
+.budget-history-expand-btn:hover { background: var(--surface2); }
+.budget-history-expense-list { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.budget-history-expense-row { display: flex; align-items: center; gap: 12px; font-size: .85rem; padding: 6px 0; border-bottom: 1px solid var(--surface2); }
+.exp-category { flex: 1; font-weight: 500; }
+.exp-amount   { color: var(--danger); font-weight: 600; }
+.exp-date     { color: var(--muted); font-size: .75rem; }
+
+/* ── Budget history — improved cards ─────────────────────────── */
+.hist-root { display: flex; flex-direction: column; gap: 16px; padding: 20px 0; }
+
+.hist-summary-strip {
+  display: flex;
+  align-items: center;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 20px 24px;
+  padding: 16px 24px;
+  gap: 0;
 }
-.budget-history-header { display: flex; flex-direction: column; gap: 10px; }
-.budget-history-meta {
+.hist-summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  gap: 4px;
+}
+.hist-summary-num {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary2);
+}
+.hist-summary-label { font-size: .75rem; color: var(--muted); }
+.hist-summary-divider { width: 1px; height: 36px; background: var(--border); }
+
+.hist-cards { display: flex; flex-direction: column; gap: 14px; }
+
+.hist-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.hist-card:hover { border-color: var(--primary); }
+.hist-card-critical { border-color: rgba(239,68,68,.4); }
+.hist-card-critical:hover { border-color: var(--danger); }
+
+.hist-card-header {
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hist-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.hist-card-month {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hist-month-icon { font-size: 1.2rem; }
+.hist-month-text { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+
+.badge-lg { font-size: .8rem !important; padding: 5px 12px !important; }
+.badge-xs { font-size: .65rem !important; padding: 2px 7px !important; }
+
+.hist-amounts-row {
+  display: flex;
+  gap: 0;
+  background: var(--surface2);
+  border-radius: 10px;
+  padding: 12px 0;
+  margin-bottom: 14px;
+}
+.hist-spent-block,
+.hist-budget-block,
+.hist-remaining-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0 12px;
+  border-right: 1px solid var(--border);
+}
+.hist-remaining-block { border-right: none; }
+.hist-spent-val { font-size: 1.15rem; font-weight: 700; color: var(--danger); }
+.hist-budget-val { font-size: 1.15rem; font-weight: 700; color: var(--text); }
+.hist-remaining-ok .hist-remaining-val { font-size: 1.15rem; font-weight: 700; color: var(--success); }
+.hist-remaining-over .hist-remaining-val { font-size: 1.15rem; font-weight: 700; color: var(--danger); }
+.hist-spent-label,
+.hist-budget-label,
+.hist-remaining-label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+
+.hist-progress-wrap {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.budget-history-date  { font-weight: 700; font-size: 1rem; }
-.budget-history-amounts {
-  display: flex;
-  gap: 20px;
-  color: var(--muted);
-  font-size: .85rem;
+.hist-progress-track {
+  flex: 1;
+  height: 8px;
+  background: var(--surface2);
+  border-radius: 99px;
+  overflow: hidden;
 }
-.budget-history-expand-btn {
+.hist-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width .4s ease;
+}
+.hist-fill-ok   { background: linear-gradient(90deg, var(--success), #16a34a); }
+.hist-fill-over { background: linear-gradient(90deg, var(--warning), var(--danger)); }
+.hist-progress-pct { font-size: .8rem; font-weight: 600; color: var(--muted); min-width: 36px; text-align: right; }
+.hist-pct-label { font-size: .75rem; color: var(--muted); margin-top: 6px; }
+
+.hist-advice-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 22px;
+  background: rgba(75,142,218,.06);
+  border-bottom: 1px solid var(--border);
+}
+.hist-advice-icon { font-size: 1rem; flex-shrink: 0; margin-top: 2px; }
+.hist-advice-text { font-size: .82rem; color: var(--muted); line-height: 1.5; }
+
+.hist-section { border-bottom: 1px solid var(--border); }
+.hist-section:last-child { border-bottom: none; }
+
+.hist-toggle-btn {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   background: none;
-  border: 1px solid var(--border);
-  color: var(--primary);
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: .8rem;
+  border: none;
+  color: var(--text);
+  padding: 12px 22px;
+  font-size: .85rem;
   font-weight: 600;
   cursor: pointer;
-  align-self: flex-start;
-  transition: background .2s;
+  transition: background .15s;
 }
-.budget-history-expand-btn:hover { background: var(--surface2); }
-.budget-history-expense-list {
-  margin-top: 14px;
-  border-top: 1px solid var(--border);
-  padding-top: 12px;
+.hist-toggle-btn:hover { background: var(--surface2); }
+.hist-toggle-arrow { color: var(--muted); font-size: .8rem; }
+
+.hist-cat-list {
+  padding: 4px 22px 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-.budget-history-expense-row {
+.hist-cat-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: .85rem;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--surface2);
+  gap: 8px;
+  font-size: .82rem;
 }
-.exp-category { flex: 1; font-weight: 500; }
-.exp-amount   { color: var(--danger); font-weight: 600; }
-.exp-date     { color: var(--muted); font-size: .75rem; }
+.hist-cat-icon { font-size: .9rem; flex-shrink: 0; }
+.hist-cat-name { width: 90px; flex-shrink: 0; color: var(--text); }
+.hist-cat-bar-track {
+  flex: 1;
+  height: 6px;
+  background: var(--surface2);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.hist-cat-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+}
+.hist-cat-pct { width: 34px; text-align: right; font-weight: 600; flex-shrink: 0; }
+.hist-cat-amounts { width: 110px; text-align: right; flex-shrink: 0; font-weight: 500; }
+
+.hist-expense-list {
+  padding: 4px 22px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hist-exp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--surface2);
+  font-size: .82rem;
+}
+.hist-exp-row:last-child { border-bottom: none; }
+.hist-exp-icon { font-size: .9rem; flex-shrink: 0; }
+.hist-exp-cat { flex: 1; font-weight: 500; }
+.hist-exp-date { flex-shrink: 0; font-size: .75rem; }
+.hist-exp-amt { font-weight: 700; color: var(--danger); flex-shrink: 0; min-width: 70px; text-align: right; }
+
+.hist-loading,
+.hist-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 20px;
+  color: var(--muted);
+}
+.hist-loading-icon,
+.hist-empty-icon { font-size: 2.4rem; }
+
+.text-danger { color: var(--danger) !important; }
+.text-muted  { color: var(--muted)  !important; }
 
 /* ── Misc helpers ────────────────────────────────────────────── */
 .loading-state { color: var(--muted); padding: 24px; text-align: center; }
