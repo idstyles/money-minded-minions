@@ -335,10 +335,16 @@ app.post("/chat", auth, async (req, res) => {
 // ─── Serve React build in production ──────────────────────────
 const frontendBuild = path.join(__dirname, "..", "frontend", "build");
 if (fs.existsSync(frontendBuild)) {
-  app.use(express.static(frontendBuild));
-  app.get(/.*/, (req, res) =>
-    res.sendFile(path.join(frontendBuild, "index.html"))
-  );
+  // Hashed JS/CSS assets: cache for 1 year
+  app.use(express.static(frontendBuild, { maxAge: "1y", etag: false }));
+
+  // index.html: never cache so browsers always get the latest shell
+  app.get(/.*/, (req, res) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+    res.sendFile(path.join(frontendBuild, "index.html"));
+  });
 }
 
 const PORT = process.env.PORT || 5000;
