@@ -3,6 +3,8 @@
 **Strategy:** Single Azure App Service. Build the app inside Cloud Shell, zip it, and deploy directly. Express serves both the API and the React build. MongoDB stays on Atlas (already in the cloud).
 
 > **Important:** Run all `az` commands as **single lines** in Cloud Shell — backslash multiline format causes "unrecognized arguments" errors.
+>
+> **Cloud Shell resets** between sessions — the cloned repo is wiped. Always re-clone from Step 7 if you start a new session.
 
 ---
 
@@ -25,13 +27,22 @@ az group create --name money-minded-rg --location westeurope
 
 ---
 
-## STEP 3 — Create an App Service Plan (F1 Free Linux)
+## STEP 3 — Create an App Service Plan
 
 ```bash
-az appservice plan create --name money-minded-plan --resource-group money-minded-rg --sku F1 --is-linux
+az appservice plan create --name money-minded-plan --resource-group money-minded-rg --sku B1 --is-linux
 ```
 
-> F1 is the free tier — no quota required. The app sleeps after 20 min of inactivity, which is fine for demos and hackathons.
+> **SKU options** — try in order if a tier is quota-blocked:
+>
+> | SKU | Tier | Daily Limit | Cost |
+> |---|---|---|---|
+> | B1 | Basic | None | ~$13/mo |
+> | S1 | Standard | None | ~$73/mo |
+> | F1 | Free | 60 CPU min/day | $0 |
+>
+> F1 causes "Site Disabled" errors during deployment due to CPU quota exhaustion — use B1 or S1 if available.
+> To upgrade an existing plan: `az appservice plan update --name money-minded-plan --resource-group money-minded-rg --sku B1`
 
 ---
 
@@ -51,7 +62,7 @@ az webapp create --name money-minded-minions-group249 --resource-group money-min
 az webapp config appsettings set --name money-minded-minions-group249 --resource-group money-minded-rg --settings SCM_DO_BUILD_DURING_DEPLOYMENT="false" PROJECT="" MONGO_URI="mongodb+srv://idstyles12:abcd1234@myfreecluster.iqvgxeb.mongodb.net/?appName=MyFreeCluster" AZURE_OPENAI_ENDPOINT="https://tiyasha-first-foundry-resource.cognitiveservices.azure.com/" AZURE_OPENAI_API_KEY="<paste-key-from-backend/.env>" AZURE_OPENAI_DEPLOYMENT="gpt-4.1-mini" AZURE_OPENAI_VERSION="2024-02-15-preview" JWT_SECRET="mmm_jwt_secret_change_in_production" NODE_ENV="production"
 ```
 
-> Replace `<paste-key-from-backend/.env>` with the actual `AZURE_OPENAI_API_KEY` value. `SCM_DO_BUILD_DURING_DEPLOYMENT=false` disables server-side Oryx build entirely — `node_modules` will be included in the zip instead (built in Cloud Shell).
+> Replace `<paste-key-from-backend/.env>` with the actual `AZURE_OPENAI_API_KEY` value. `SCM_DO_BUILD_DURING_DEPLOYMENT=false` disables server-side Oryx build — `node_modules` are included in the zip instead (built in Cloud Shell).
 
 ---
 
@@ -65,31 +76,31 @@ az webapp config set --name money-minded-minions-group249 --resource-group money
 
 ---
 
-## STEP 7 — Clone Repo and Build Everything in Cloud Shell
+## STEP 7 — Clone Repo and Build in Cloud Shell
+
+> Re-run this step every time you open a new Cloud Shell session — the home directory is wiped on session reset.
 
 ```bash
 cd ~ && git clone https://github.com/idstyles/money-minded-minions.git && cd money-minded-minions && git checkout aichange
 ```
 
-Install all dependencies and build React — everything runs in Cloud Shell, not on the App Service:
+Install all dependencies and build React:
 
 ```bash
 npm --prefix backend install && npm --prefix frontend install && npm --prefix frontend run build
 ```
 
-> All heavy work (npm install + React build) runs in Cloud Shell (free, unlimited CPU) — F1 quota is never touched.
+> All heavy work (npm install + React build) runs in Cloud Shell (free, unlimited CPU) — App Service CPU quota is never touched.
 
 ---
 
 ## STEP 8 — Create Deployment Zip
 
-Include `backend/node_modules` in the zip so Azure has no build step at all — just extract and run:
+Include `backend/node_modules` so Azure has nothing to build — just extract and run:
 
 ```bash
 cd ~/money-minded-minions && zip -r ~/app-final.zip backend frontend/build package.json -x "backend/node_modules/.cache/*"
 ```
-
-> Excluding only `.cache` keeps the zip lean while retaining all required modules.
 
 ---
 
@@ -99,11 +110,11 @@ cd ~/money-minded-minions && zip -r ~/app-final.zip backend frontend/build packa
 az webapp deploy --name money-minded-minions-group249 --resource-group money-minded-rg --src-path ~/app-final.zip --type zip --async true
 ```
 
-> `--async true` returns immediately — Azure processes the deployment in the background, avoiding client-side timeout errors (502/504).
+> `--async true` returns immediately — Azure processes in the background, avoiding 502/504 timeout errors.
 >
-> If you get a 403 "Web app is stopped" error, go to **Azure Portal → App Services → money-minded-minions-group249 → Start**, then rerun this command.
+> If you get **403 "Web app is stopped"** → go to **Azure Portal → App Services → money-minded-minions-group249 → Start**, then rerun.
 
-Wait ~2 minutes then check the app state:
+Wait ~2 minutes then check state:
 
 ```bash
 az webapp show --name money-minded-minions-group249 --resource-group money-minded-rg --query "state" -o tsv
@@ -125,10 +136,30 @@ https://money-minded-minions-group249.azurewebsites.net
 
 ---
 
-## STEP 11 — Stream Live Logs (for debugging)
+## STEP 11 — Check Logs (if app errors)
 
+**Live log stream:**
 ```bash
 az webapp log tail --name money-minded-minions-group249 --resource-group money-minded-rg
+```
+
+**Download logs:**
+```bash
+az webapp log config --name money-minded-minions-group249 --resource-group money-minded-rg --application-logging filesystem --level information
+az webapp log download --name money-minded-minions-group249 --resource-group money-minded-rg --log-file ~/app-logs.zip
+```
+
+**Via Portal (works even when SCM is throttled):**
+Portal → App Services → money-minded-minions-group249 → **Monitoring → Log stream**
+
+---
+
+## Redeployment (after code changes)
+
+If the Cloud Shell session was reset, start from Step 7. Otherwise:
+
+```bash
+cd ~/money-minded-minions && git pull origin aichange && npm --prefix frontend run build && zip -r ~/app-final.zip backend frontend/build package.json -x "backend/node_modules/.cache/*" && az webapp deploy --name money-minded-minions-group249 --resource-group money-minded-rg --src-path ~/app-final.zip --type zip --async true
 ```
 
 ---
@@ -146,7 +177,7 @@ az group delete --name money-minded-rg --yes --no-wait
 | Resource | Name |
 |---|---|
 | Resource Group | `money-minded-rg` |
-| App Service Plan | `money-minded-plan` (F1 Free Linux) |
+| App Service Plan | `money-minded-plan` (B1 Basic Linux) |
 | Web App | `money-minded-minions-group249` |
 | Region | West Europe |
 | Runtime | Node.js 20 LTS |
@@ -165,12 +196,12 @@ Browser
               ├── /budget         → Budget API
               ├── /add-expense    → Expense API
               ├── /chat           → AI co-pilot
-              └── /*              → React build (frontend/build)
+              └── /.*/            → React build (frontend/build)
 ```
 
-- All builds run in Cloud Shell (free, unlimited) — F1 CPU quota is never consumed
+- All builds run in Cloud Shell (free, unlimited) — App Service CPU quota is never consumed
 - Zip includes `backend/node_modules` + `frontend/build` — Azure just extracts and starts, no build step
-- `SCM_DO_BUILD_DURING_DEPLOYMENT=false` ensures Oryx does not run on the server
+- `SCM_DO_BUILD_DURING_DEPLOYMENT=false` ensures Oryx never runs on the server
 - `process.env.PORT` is set automatically by Azure (defaults to 8080)
 - MongoDB runs on Atlas — no database resource needed in Azure
-- All secrets are in App Service environment variables (not in code)
+- All secrets stored in App Service environment variables (not in code)
