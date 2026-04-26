@@ -1,8 +1,8 @@
 import { useState } from "react";
 
-const API = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const API = process.env.NODE_ENV === "production" ? "" : "http://localhost:5000";
 
-export default function AuthPage({ onAuth }) {
+export default function AuthPage({ onAuth, onPending }) {
   const [tab, setTab] = useState("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -24,6 +24,10 @@ export default function AuthPage({ onAuth }) {
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || "Something went wrong");
+        return;
+      }
+      if (data.pending) {
+        onPending();
         return;
       }
       onAuth(data.token, data.user);

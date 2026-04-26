@@ -7,6 +7,12 @@ const ExpenseSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const CategoryLimitSchema = new mongoose.Schema({
+  category: { type: String, required: true },
+  limit: { type: Number, required: true },
+  spent: { type: Number, default: 0 }
+});
+
 const BudgetSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -18,6 +24,7 @@ const BudgetSchema = new mongoose.Schema({
   remainingBudget: Number,
   budgetHealth: String,
   expenses: [ExpenseSchema],
+  categoryLimits: [CategoryLimitSchema],
   aiAdvice: {
     recommendation: String,
     advice: String

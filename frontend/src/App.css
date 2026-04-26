@@ -6,8 +6,10 @@
   --border:   #334155;
   --text:     #e2e8f0;
   --muted:    #94a3b8;
-  --primary:  #6366f1;
-  --primary2: #8b5cf6;
+  --primary:  #4B8EDA;
+  --primary2: #FFD93D;
+  --minion-yellow: #FFD93D;
+  --minion-blue:   #4B8EDA;
   --success:  #22c55e;
   --warning:  #f59e0b;
   --danger:   #ef4444;
@@ -33,28 +35,52 @@ body {
 }
 
 .app-header {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary2) 100%);
+  background: linear-gradient(135deg, var(--minion-yellow) 0%, var(--minion-blue) 100%);
   padding: 20px 32px;
   display: flex;
   align-items: center;
   gap: 14px;
   box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+  color: #1a1a1a;
+}
+
+/* Subtle banana pattern behind the header */
+.app-header::before {
+  content: "🍌 🍌 🍌 🍌 🍌 🍌 🍌 🍌 🍌 🍌 🍌 🍌";
+  position: absolute;
+  top: -4px; left: 0; right: 0;
+  font-size: 1.4rem;
+  letter-spacing: 28px;
+  opacity: 0.12;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  animation: banana-scroll 18s linear infinite;
 }
 
 .app-header .logo {
   font-size: 28px;
+  position: relative;
+  z-index: 1;
 }
 
 .app-header h1 {
   font-size: 1.4rem;
   font-weight: 700;
   letter-spacing: -.3px;
+  color: #1a1a1a;
+  position: relative;
+  z-index: 1;
 }
 
 .app-header p {
   font-size: .82rem;
-  opacity: .8;
+  color: rgba(0,0,0,.65);
   margin-top: 2px;
+  position: relative;
+  z-index: 1;
 }
 
 .main-grid {
@@ -202,7 +228,7 @@ body {
 .btn-primary {
   width: 100%;
   padding: 11px;
-  background: linear-gradient(135deg, var(--primary), var(--primary2));
+  background: linear-gradient(135deg, #4B8EDA, #3578c8);
   color: #fff;
   font-size: .92rem;
   font-weight: 600;
@@ -326,31 +352,25 @@ body {
   height: 600px;
   position: sticky;
   top: 24px;
+  border-color: var(--minion-yellow) !important;
 }
 
 .copilot-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   margin-bottom: 14px;
-}
-
-.copilot-header .pulse {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--success);
-  box-shadow: 0 0 0 0 rgba(34,197,94,.4);
-  animation: pulse 2s infinite;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--minion-yellow);
 }
 
 .copilot-header h2 {
   font-size: .95rem;
   font-weight: 700;
+  flex: 1;
 }
 
 .copilot-header .model-tag {
-  margin-left: auto;
   font-size: .65rem;
   color: var(--muted);
   background: var(--surface2);
@@ -384,7 +404,7 @@ body {
 
 .msg.user {
   align-self: flex-end;
-  background: linear-gradient(135deg, var(--primary), var(--primary2));
+  background: linear-gradient(135deg, #4B8EDA, #3578c8);
   color: #fff;
   border-bottom-right-radius: 4px;
 }
@@ -431,8 +451,8 @@ body {
 
 .btn-send {
   padding: 10px 16px;
-  background: linear-gradient(135deg, var(--primary), var(--primary2));
-  color: #fff;
+  background: linear-gradient(135deg, #FFD93D, #f0c800);
+  color: #1a1a1a;
   font-size: .88rem;
   font-weight: 600;
   border: none;
@@ -474,9 +494,28 @@ body {
   width: 36px;
   height: 36px;
   border: 3px solid var(--border);
-  border-top-color: var(--primary);
+  border-top-color: var(--minion-yellow);
   border-radius: 50%;
   animation: spin .7s linear infinite;
+}
+
+.loading-minion-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.loading-minion-wrap p {
+  color: var(--minion-yellow);
+  font-size: 1rem;
+  font-weight: 700;
+  animation: bello-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes bello-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: .6; transform: scale(1.08); }
 }
 
 /* ── Auth page ───────────────────────────────────────────────── */
@@ -585,26 +624,33 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  position: relative;
+  z-index: 1;
 }
 
 .user-name {
   font-size: .82rem;
-  opacity: .85;
+  color: #1a1a1a;
+  font-weight: 600;
+  position: relative;
+  z-index: 1;
 }
 
 .btn-logout {
   padding: 6px 14px;
-  background: rgba(255,255,255,.1);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,.2);
+  background: rgba(0,0,0,.12);
+  color: #1a1a1a;
+  border: 1px solid rgba(0,0,0,.22);
   border-radius: 6px;
   font-size: .82rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: background .15s;
+  position: relative;
+  z-index: 1;
 }
 
-.btn-logout:hover { background: rgba(255,255,255,.18); }
+.btn-logout:hover { background: rgba(0,0,0,.22); }
 
 .btn-secondary {
   padding: 6px 14px;
@@ -779,4 +825,629 @@ body {
   letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--primary2);
+}
+
+/* ── Header buttons ──────────────────────────────────────────── */
+.header-btn {
+  background: rgba(0,0,0,.12);
+  border: 1px solid rgba(0,0,0,.22);
+  color: #1a1a1a;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: .8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .2s;
+  position: relative;
+  z-index: 1;
+}
+.header-btn:hover { background: rgba(0,0,0,.22); }
+.header-btn-admin {
+  background: rgba(255,217,61,.45);
+  border-color: rgba(0,0,0,.25);
+  color: #1a1a1a;
+}
+.header-btn-admin:hover { background: rgba(255,217,61,.7); }
+
+/* ── Badges ──────────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  letter-spacing: .03em;
+}
+.badge-pending  { background: #92400e; color: #fde68a; }
+.badge-approved { background: #14532d; color: #86efac; }
+.badge-rejected { background: #7f1d1d; color: #fca5a5; }
+
+/* ── Pending screen ──────────────────────────────────────────── */
+.pending-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 24px;
+}
+.pending-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 48px 40px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.pending-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 4px solid var(--warning);
+  margin: 0 auto 24px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pending-clock-face {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--warning);
+  position: relative;
+}
+.pending-clock-hand {
+  position: absolute;
+  background: var(--warning);
+  border-radius: 2px;
+  bottom: 50%;
+  left: 50%;
+  transform-origin: bottom center;
+}
+.pending-clock-hour   { width: 2px; height: 10px; transform: translateX(-50%) rotate(-30deg); }
+.pending-clock-minute { width: 2px; height: 14px; transform: translateX(-50%) rotate(120deg); }
+.pending-title   { font-size: 1.3rem; font-weight: 700; margin-bottom: 12px; color: var(--text); }
+.pending-message { color: var(--muted); line-height: 1.6; margin-bottom: 28px; }
+
+/* ── Admin page ──────────────────────────────────────────────── */
+.admin-page {
+  padding: 32px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.admin-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.admin-title { font-size: 1.4rem; font-weight: 700; }
+.admin-user-list { display: flex; flex-direction: column; gap: 12px; }
+.admin-user-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.admin-user-info { display: flex; flex-direction: column; gap: 4px; }
+.admin-user-name  { font-weight: 600; }
+.admin-user-email { color: var(--muted); font-size: .85rem; }
+.admin-user-date  { color: var(--muted); font-size: .75rem; }
+.admin-user-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.btn-approve {
+  background: #14532d;
+  color: #86efac;
+  border: 1px solid #166534;
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s;
+}
+.btn-approve:hover:not(:disabled) { background: #166534; }
+.btn-reject {
+  background: #7f1d1d;
+  color: #fca5a5;
+  border: 1px solid #991b1b;
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s;
+}
+.btn-reject:hover:not(:disabled) { background: #991b1b; }
+.btn-approve:disabled, .btn-reject:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── Account page ────────────────────────────────────────────── */
+.account-page {
+  padding: 32px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.account-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.account-title { font-size: 1.4rem; font-weight: 700; }
+.account-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 16px;
+}
+.account-section-title { font-size: 1rem; font-weight: 700; margin-bottom: 16px; color: var(--primary2); }
+.account-info-grid {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 10px 16px;
+  align-items: center;
+}
+.account-info-label { color: var(--muted); font-size: .85rem; }
+.account-info-value { font-weight: 500; }
+.account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.input {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 10px 14px;
+  font-size: .9rem;
+  width: 100%;
+  outline: none;
+  transition: border-color .2s;
+}
+.input:focus { border-color: var(--primary); }
+.inline-message { font-size: .8rem; }
+.inline-message-success { color: var(--success); }
+.inline-message-error   { color: var(--danger); }
+.btn-logout-full {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  border-radius: 8px;
+  font-size: .9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s;
+}
+.btn-logout-full:hover { background: rgba(239,68,68,.1); }
+
+/* ── Category budgets ────────────────────────────────────────── */
+.category-budget-list { display: flex; flex-direction: column; gap: 12px; }
+.category-budget-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.category-budget-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.category-budget-name { font-weight: 600; font-size: .9rem; }
+.category-progress-bar-track {
+  height: 6px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.category-progress-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width .4s ease;
+}
+.category-progress-under { background: var(--primary); }
+.category-progress-over  { background: var(--danger); }
+.category-budget-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.category-budget-amounts { font-size: .8rem; color: var(--muted); }
+.category-edit-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.category-edit-row input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 6px 10px;
+  font-size: .85rem;
+  outline: none;
+}
+.category-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.category-add-row input,
+.category-add-row select {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: .86rem;
+  outline: none;
+  transition: border-color .15s;
+}
+.category-add-row input:focus,
+.category-add-row select:focus { border-color: var(--primary); }
+.category-add-row select option { background: var(--surface2); }
+
+/* ── Dashboard tab bar ───────────────────────────────────────── */
+.tab-bar {
+  display: flex;
+  gap: 0;
+  padding: 0 32px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.tab-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 14px 24px;
+  font-size: .9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: color .2s, border-color .2s;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn-active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* ── Budget history ──────────────────────────────────────────── */
+.history-wrapper {
+  padding: 28px 32px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.history-tab-content { display: flex; flex-direction: column; gap: 16px; }
+.budget-history-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+}
+.budget-history-header { display: flex; flex-direction: column; gap: 10px; }
+.budget-history-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.budget-history-date  { font-weight: 700; font-size: 1rem; }
+.budget-history-amounts {
+  display: flex;
+  gap: 20px;
+  color: var(--muted);
+  font-size: .85rem;
+}
+.budget-history-expand-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--primary);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background .2s;
+}
+.budget-history-expand-btn:hover { background: var(--surface2); }
+.budget-history-expense-list {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.budget-history-expense-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: .85rem;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--surface2);
+}
+.exp-category { flex: 1; font-weight: 500; }
+.exp-amount   { color: var(--danger); font-weight: 600; }
+.exp-date     { color: var(--muted); font-size: .75rem; }
+
+/* ── Misc helpers ────────────────────────────────────────────── */
+.loading-state { color: var(--muted); padding: 24px; text-align: center; }
+.empty-state   { color: var(--muted); padding: 16px 0; text-align: center; font-size: .9rem; }
+.empty-state-sm { color: var(--muted); font-size: .8rem; padding: 8px 0; }
+.alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: .85rem; }
+.alert-error { background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.4); color: #fca5a5; }
+.btn-sm { padding: 6px 12px !important; font-size: .8rem !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   🍌  MINION THEME  🍌
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Minion animations ───────────────────────────────────────── */
+@keyframes minion-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25%       { transform: translateY(-7px) rotate(-2deg); }
+  75%       { transform: translateY(-3px) rotate(2deg); }
+}
+
+@keyframes minion-blink {
+  0%, 88%, 100% { transform: scaleY(1); }
+  92%            { transform: scaleY(0.08); }
+  96%            { transform: scaleY(1); }
+}
+
+@keyframes minion-wave {
+  0%, 100% { transform: rotate(0deg); transform-origin: bottom center; }
+  25%       { transform: rotate(20deg); transform-origin: bottom center; }
+  75%       { transform: rotate(-10deg); transform-origin: bottom center; }
+}
+
+@keyframes banana-float {
+  0%, 100% { transform: translateY(0) rotate(-12deg); }
+  50%       { transform: translateY(-8px) rotate(12deg); }
+}
+
+@keyframes banana-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes goggle-shine {
+  0%, 80%, 100% { opacity: 0; transform: scale(0.5) translate(-2px, -2px); }
+  85%           { opacity: 1; transform: scale(1) translate(-2px, -2px); }
+  90%           { opacity: 0; }
+}
+
+/* ── Minion character ────────────────────────────────────────── */
+.minion-wrap {
+  display: inline-block;
+  padding-top: 12px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.minion-animated {
+  animation: minion-bob 2.2s ease-in-out infinite;
+}
+
+/* size variants */
+.minion-sm .minion-body { width: 32px; height: 42px; border-width: 1.5px; }
+.minion-sm .minion-strap { top: 13px; height: 5px; }
+.minion-sm .minion-goggle { top: 8px; width: 17px; height: 17px; border-width: 1.5px; }
+.minion-sm .minion-eye { width: 13px; height: 13px; }
+.minion-sm .minion-pupil { width: 7px; height: 7px; }
+.minion-sm .minion-iris { width: 3px; height: 3px; }
+.minion-sm .minion-mouth { bottom: 13px; width: 12px; height: 5px; border-width: 1.5px; }
+.minion-sm .minion-overall { height: 13px; border-top-width: 1.5px; }
+.minion-sm .minion-pocket { width: 7px; height: 6px; border-width: 1.5px; }
+.minion-sm .minion-hair { top: 1px; }
+.minion-sm .minion-hair span { width: 2.5px; height: 7px; }
+
+/* Hair (above the body, inside the wrap) */
+.minion-hair {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 3px;
+  z-index: 5;
+}
+.minion-hair span {
+  display: block;
+  width: 4px;
+  height: 11px;
+  background: #1a1a1a;
+  border-radius: 3px 3px 1px 1px;
+}
+.minion-hair span:nth-child(2) { height: 13px; }
+
+/* Body — yellow oval */
+.minion-body {
+  position: relative;
+  width: 56px;
+  height: 72px;
+  background: var(--minion-yellow);
+  border-radius: 50% 50% 42% 42% / 56% 56% 44% 44%;
+  border: 2.5px solid #1a1a1a;
+  box-shadow: 3px 4px 0 #c8a800, inset -4px -6px 0 rgba(0,0,0,.07);
+  overflow: hidden;
+}
+
+/* Goggle strap — grey band behind goggle */
+.minion-strap {
+  position: absolute;
+  top: 20px;
+  left: -3px;
+  right: -3px;
+  height: 8px;
+  background: linear-gradient(180deg, #aaa 0%, #777 100%);
+  border-top: 1px solid #333;
+  border-bottom: 1px solid #333;
+  z-index: 1;
+}
+
+/* Goggle metallic ring */
+.minion-goggle {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 29px;
+  height: 29px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ccc 0%, #888 60%, #555 100%);
+  border: 2.5px solid #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+/* White of eye */
+.minion-eye {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #fff 0%, #eee 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: minion-blink 5s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Brown iris */
+.minion-pupil {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #8B5E00 0%, #5B3A00 100%);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Black dot */
+.minion-iris {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #0a0a0a;
+}
+
+/* Goggle shine */
+.minion-shine {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.85);
+  animation: goggle-shine 5s ease-in-out infinite;
+}
+
+/* Overall — blue denim bottom */
+.minion-overall {
+  position: absolute;
+  bottom: 0;
+  left: -1px;
+  right: -1px;
+  height: 20px;
+  background: linear-gradient(180deg, #5B8DEF 0%, #4275d4 100%);
+  border-top: 2.5px solid #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+/* Pocket */
+.minion-pocket {
+  width: 14px;
+  height: 10px;
+  border: 2px solid #1a1a1a;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  background: rgba(255,255,255,.12);
+  margin-top: 4px;
+}
+
+/* Smile */
+.minion-mouth {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 22px;
+  height: 10px;
+  border-left: 2.5px solid #1a1a1a;
+  border-right: 2.5px solid #1a1a1a;
+  border-bottom: 2.5px solid #1a1a1a;
+  border-top: none;
+  border-radius: 0 0 50% 50%;
+  background: transparent;
+  z-index: 3;
+}
+
+/* ── Banana decorations ──────────────────────────────────────── */
+.banana-deco {
+  font-size: 1.3rem;
+  animation: banana-float 3s ease-in-out infinite;
+  display: inline-block;
+  position: relative;
+  z-index: 1;
+}
+.banana-deco-2 { animation-delay: 1.2s; }
+.banana-deco-3 { animation-delay: 2.1s; animation-duration: 3.5s; }
+
+/* ── Agent message gets banana prefix ────────────────────────── */
+.msg.agent::before {
+  content: "🍌 ";
+  font-size: .75rem;
+}
+
+/* ── Minion-themed auth page tweaks ──────────────────────────── */
+.auth-logo { animation: minion-bob 2.5s ease-in-out infinite; display: inline-block; }
+
+/* ── Minion border accent on cards ──────────────────────────── */
+.card:hover {
+  border-color: var(--minion-yellow);
+  transition: border-color .3s;
+}
+
+/* ── Pending screen minion ───────────────────────────────────── */
+.pending-card .minion-wrap { margin: 0 auto 20px; }
+
+/* ── Copilot panel Minion ────────────────────────────────────── */
+.copilot-minion-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.copilot-minion-label {
+  font-size: .55rem;
+  color: var(--minion-yellow);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
 }
