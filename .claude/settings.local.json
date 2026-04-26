@@ -18,7 +18,8 @@
       "Read(//c/Program Files/Microsoft SDKs/Azure/CLI2/**)",
       "PowerShell(Start-Process msiexec.exe -ArgumentList \"/i `\"$env:TEMP\\\\AzureCLI.msi`\" /quiet /norestart\" -Wait -PassThru | Select-Object ExitCode)",
       "PowerShell(pip *)",
-      "PowerShell(Stop-Process *)"
+      "PowerShell(Stop-Process *)",
+      "Bash(curl *)"
     ]
   }
 }
