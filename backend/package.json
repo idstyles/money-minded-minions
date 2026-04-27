@@ -4,7 +4,8 @@
   "description": "This is about creating a chatbot",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
+    "start": "node index.js",
     "dev": "npx nodemon index.js"
   },
   "author": "Indranuj Das",
@@ -12,14 +13,17 @@
   "dependencies": {
     "@azure/ai-projects": "^2.1.0",
     "@azure/identity": "^4.13.1",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.1.1",
     "mongoose": "^9.4.1",
     "openai": "^6.34.0"
   },
   "devDependencies": {
+    "jest": "^30.3.0",
     "nodemon": "^3.1.14"
   }
 }
