@@ -5,6 +5,7 @@ import PendingPage from "./PendingPage";
 import AdminPage from "./AdminPage";
 import AccountPage from "./AccountPage";
 import BudgetHistoryTab from "./BudgetHistoryTab";
+import ForecastTab from "./ForecastTab";
 import MinionAvatar from "./MinionAvatar";
 
 const API = process.env.NODE_ENV === "production" ? "" : "http://localhost:5000";
@@ -552,10 +553,19 @@ export default function App() {
         >
           Budget History
         </button>
+        <button
+          className={`tab-btn ${dashboardTab === "forecast" ? "tab-btn-active" : ""}`}
+          onClick={() => setDashboardTab("forecast")}
+        >
+          🔮 Forecast
+        </button>
       </div>
 
       <div className="main-grid">
-        {dashboardTab === "history" ? (
+        {dashboardTab === "forecast" ? (
+          /* ── Forecast tab ── */
+          <ForecastTab token={token} />
+        ) : dashboardTab === "history" ? (
           /* ── History left column ── */
           <BudgetHistoryTab token={token} />
         ) : (

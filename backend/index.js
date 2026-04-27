@@ -7,6 +7,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { budgetCreation, expenseAdding } = require("./ai/orchestrator");
 const { callLLM } = require("./ai/azureOpenAi");
+const forecastService = require("./services/forecastService");
 const Budget = require("./models/BudgetSchema");
 const User = require("./models/UserSchema");
 const auth = require("./middleware/auth");
@@ -199,6 +200,84 @@ app.get("/budgets/all", auth, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to fetch budgets" });
+  }
+});
+
+app.get("/budgets/history", auth, async (req, res) => {
+  try {
+    const months = Math.min(parseInt(req.query.months) || 12, 24);
+    const allBudgets = await Budget.find({ userId: req.user.id }).sort({ createdAt: 1 });
+    const sliced = allBudgets.slice(-months);
+
+    const monthsData = sliced.map((b) => {
+      const date = new Date(b.createdAt);
+      const monthLabel = date.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
+      const categoryBreakdown = (b.categoryLimits || []).map((cl) => ({
+        category: cl.category,
+        spent: cl.spent,
+        limit: cl.limit,
+        exceededLimit: cl.spent > cl.limit,
+      }));
+      return {
+        monthLabel,
+        budget: b.monthlyBudget,
+        spent: b.totalSpent,
+        remaining: b.remainingBudget,
+        exceededBudget: b.totalSpent > b.monthlyBudget,
+        budgetHealth: b.budgetHealth,
+        categoryBreakdown,
+      };
+    });
+
+    const totalMonths = monthsData.length;
+    const avgBudget = totalMonths ? Math.round(monthsData.reduce((s, m) => s + m.budget, 0) / totalMonths) : 0;
+    const avgSpent = totalMonths ? Math.round(monthsData.reduce((s, m) => s + m.spent, 0) / totalMonths) : 0;
+
+    res.json({ months: monthsData, summary: { totalMonths, avgBudget, avgSpent } });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch budget history" });
+  }
+});
+
+const forecastNarrativePrompt = fs.readFileSync(
+  path.join(__dirname, "ai", "prompts", "forecastNarrative.txt"),
+  "utf-8"
+);
+
+app.get("/budgets/forecast", auth, async (req, res) => {
+  try {
+    const months = Math.min(parseInt(req.query.months) || 12, 24);
+    const allBudgets = await Budget.find({ userId: req.user.id }).sort({ createdAt: 1 });
+
+    const forecastResult = forecastService.generate(allBudgets, months);
+
+    // Get AI narrative (skip if no data)
+    let aiNarrative = null;
+    let purchaseAdvice = null;
+    if (!forecastResult.insufficientData || forecastResult.actualMonthsUsed > 0) {
+      try {
+        const narrativeResp = await callLLM({
+          messages: [
+            { role: "system", content: forecastNarrativePrompt },
+            { role: "user", content: JSON.stringify(forecastResult) },
+          ],
+          temperature: 0.4,
+          max_tokens: 250,
+        });
+        const raw = narrativeResp.choices[0].message.content.trim();
+        const parsed = JSON.parse(raw);
+        aiNarrative = parsed.narrative || null;
+        purchaseAdvice = parsed.purchaseAdvice || null;
+      } catch (aiErr) {
+        console.error("Forecast AI narrative failed:", aiErr.message);
+      }
+    }
+
+    res.json({ ...forecastResult, aiNarrative, purchaseAdvice });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to generate forecast" });
   }
 });
 
